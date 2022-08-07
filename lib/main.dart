@@ -1,6 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+Future<void> main() async {
+  await Firebase.initializeApp();
   runApp(const ChatApp());
 }
 
@@ -20,30 +23,78 @@ class ChatApp extends StatelessWidget {
   }
 }
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
+
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  String infoText = "";
+  String email = "";
+  String password = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              child: const Text('ログイン'),
-              onPressed: () async {
-                // チャット画面に遷移＋ログイン画面を破棄
-                await Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) {
-                    return ChatPage();
-                  }),
-                );
-              },
-            )
-          ],
-        ),
-      ),
+          child: Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  // メールアドレス入力
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'メールアドレス'),
+                    onChanged: (String value) {
+                      setState(() {
+                        email = value;
+                      });
+                    },
+                  ),
+                  // パスワード入力
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'パスワード'),
+                    obscureText: true,
+                    onChanged: (String value) {
+                      setState(() {
+                        password = value;
+                      });
+                    },
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    // メッセージ表示
+                    child: Text(infoText),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      child: const Text("ユーザー登録"),
+                      onPressed: () async {
+                        try {
+                          final FirebaseAuth auth = FirebaseAuth.instance;
+                          await auth.createUserWithEmailAndPassword(
+                              email: email, password: password);
+
+                          //登録完了時の処理
+                          await Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (context) {
+                              return const ChatPage();
+                            }),
+                          );
+                        } catch (e) {
+                          //エラー処理
+                          setState(() {
+                            infoText = "登録に失敗しました：${e.toString()}";
+                          });
+                        }
+                      },
+                    ),
+                  )
+                ],
+              ))),
     );
   }
 }
