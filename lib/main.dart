@@ -82,13 +82,14 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: () async {
                         try {
                           final FirebaseAuth auth = FirebaseAuth.instance;
-                          await auth.createUserWithEmailAndPassword(
-                              email: email, password: password);
+                          final result =
+                              await auth.createUserWithEmailAndPassword(
+                                  email: email, password: password);
 
                           //登録完了時の処理
                           await Navigator.of(context).pushReplacement(
                             MaterialPageRoute(builder: (context) {
-                              return const ChatPage();
+                              return ChatPage(result.user!);
                             }),
                           );
                         } catch (e) {
@@ -99,7 +100,31 @@ class _LoginPageState extends State<LoginPage> {
                         }
                       },
                     ),
-                  )
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        child: const Text("ログイン"),
+                        onPressed: () async {
+                          try {
+                            final FirebaseAuth auth = FirebaseAuth.instance;
+                            final result =
+                                await auth.signInWithEmailAndPassword(
+                                    email: email, password: password);
+
+                            await Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (context) {
+                                return ChatPage(result.user!);
+                              }),
+                            );
+                          } catch (e) {
+                            setState(() {
+                              infoText = "ログインに失敗しました: ${e.toString()}";
+                            });
+                          }
+                        },
+                      )),
                 ],
               ))),
     );
@@ -107,7 +132,9 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class ChatPage extends StatelessWidget {
-  const ChatPage({Key? key}) : super(key: key);
+  ChatPage(this.user);
+
+  final User user;
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +154,9 @@ class ChatPage extends StatelessWidget {
             },
           ),
         ],
+      ),
+      body: Center(
+        child: Text("ログイン情報: ${user.email}"),
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
