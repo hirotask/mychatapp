@@ -158,8 +158,55 @@ class ChatPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Text("ログイン情報: ${user.email}"),
+      body: Column(
+        children: <Widget>[
+          Container(
+            padding: EdgeInsets.all(8),
+            child: Text("ログイン情報: ${user.email}"),
+          ),
+          Expanded(
+            // FutureBuilder
+            // 非同期処理の結果を元にWidgetを作れる
+            child: FutureBuilder<QuerySnapshot>(
+              // 投稿メッセージ一覧を取得（非同期処理）
+              // 投稿日時でソート
+
+              future: FirebaseFirestore.instance
+                  .collection("posts")
+                  .orderBy("date")
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  final List<DocumentSnapshot> documents = snapshot.data!.docs;
+                  // 取得した投稿メッセージ一覧を元にリスト表示
+                  return ListView(
+                    children: documents.map((document) {
+                      return Card(
+                        child: ListTile(
+                          title: Text(document["text"]),
+                          subtitle: Text(document["email"]),
+                          trailing: document["email"] == user.email
+                              ? IconButton(
+                                  onPressed: () async {
+                                    await FirebaseFirestore.instance
+                                        .collection("posts")
+                                        .doc(document.id)
+                                        .delete();
+                                  },
+                                  icon: Icon(Icons.delete))
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                }
+                return const Center(
+                  child: Text("読込中..."),
+                );
+              },
+            ),
+          )
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
