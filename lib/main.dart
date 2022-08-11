@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,6 @@ Future<void> main() async {
 class ChatApp extends StatelessWidget {
   const ChatApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -167,7 +167,7 @@ class ChatPage extends StatelessWidget {
           // 投稿画面に遷移
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) {
-              return AddPostPage();
+              return AddPostPage(user);
             }),
           );
         },
@@ -176,8 +176,17 @@ class ChatPage extends StatelessWidget {
   }
 }
 
-class AddPostPage extends StatelessWidget {
-  const AddPostPage({Key? key}) : super(key: key);
+class AddPostPage extends StatefulWidget {
+  const AddPostPage(this.user);
+
+  final User user;
+
+  @override
+  _AddPostPageState createState() => _AddPostPageState();
+}
+
+class _AddPostPageState extends State<AddPostPage> {
+  String messageText = "";
 
   @override
   Widget build(BuildContext context) {
@@ -186,13 +195,44 @@ class AddPostPage extends StatelessWidget {
         title: const Text('チャット投稿'),
       ),
       body: Center(
-        child: ElevatedButton(
-          child: const Text('戻る'),
-          onPressed: () {
-            // 1つ前の画面に戻る
-            Navigator.of(context).pop();
-          },
-        ),
+        child: Container(
+            padding: EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                TextFormField(
+                  decoration: const InputDecoration(labelText: "投稿メッセージ"),
+                  keyboardType: TextInputType.multiline,
+                  maxLines: 3,
+                  onChanged: (String value) {
+                    setState(() {
+                      messageText = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                Container(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      child: Text("投稿"),
+                      onPressed: () async {
+                        final date = DateTime.now().toIso8601String();
+                        final email = widget.user.email;
+
+                        await FirebaseFirestore.instance
+                            .collection("posts")
+                            .doc()
+                            .set({
+                          "text": messageText,
+                          "email": email,
+                          "date": date
+                        });
+
+                        Navigator.of(context).pop();
+                      },
+                    ))
+              ],
+            )),
       ),
     );
   }
