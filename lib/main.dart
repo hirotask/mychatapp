@@ -2,8 +2,47 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'firebase_options.dart';
+
+//ユーザー情報の受け渡しを行うためのProvider
+final userProvider = StateProvider((ref) {
+  return FirebaseAuth.instance.currentUser;
+});
+
+// エラー情報の受け渡しを行うためのProvider
+// ※ autoDisposeを付けることで自動的に値をリセットできる
+final infoTextProvider = StateProvider.autoDispose((ref) {
+  return '';
+});
+
+// メールアドレスの受け渡しを行うためのProvider
+// ※ autoDisposeを付けることで自動的に値をリセットできます
+final emailProvider = StateProvider.autoDispose((ref) {
+  return '';
+});
+
+// パスワードの受け渡しを行うためのProvider
+// ※ autoDisposeを付けることで自動的に値をリセットできます
+final passwordProvider = StateProvider.autoDispose((ref) {
+  return '';
+});
+
+// メッセージの受け渡しを行うためのProvider
+// ※ autoDisposeを付けることで自動的に値をリセットできます
+final messageTextProvider = StateProvider.autoDispose((ref) {
+  return '';
+});
+
+// StreamProviderを使うことでStreamも扱うことができる
+// ※ autoDisposeを付けることで自動的に値をリセットできます
+final postsQueryProvider = StreamProvider.autoDispose((ref) {
+  return FirebaseFirestore.instance
+      .collection('posts')
+      .orderBy('date')
+      .snapshots();
+});
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Add this
@@ -12,7 +51,9 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const ChatApp());
+  runApp(const ProviderScope(
+    child: ChatApp(),
+  ));
 }
 
 class ChatApp extends StatelessWidget {
@@ -30,20 +71,15 @@ class ChatApp extends StatelessWidget {
   }
 }
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerWidget {
   const LoginPage({Key? key}) : super(key: key);
 
   @override
-  _LoginPageState createState() => _LoginPageState();
-}
+  Widget build(BuildContext context, ScopedReader watch) {
+    String infoText = watch(infoTextProvider).state;
+    String email = watch(emailProvider).state;
+    String password = watch(passwordProvider).state;
 
-class _LoginPageState extends State<LoginPage> {
-  String infoText = "";
-  String email = "";
-  String password = "";
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
           child: Container(
@@ -55,9 +91,7 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'メールアドレス'),
                     onChanged: (String value) {
-                      setState(() {
-                        email = value;
-                      });
+                      context.read(emailProvider).state = value;
                     },
                   ),
                   // パスワード入力
@@ -65,9 +99,7 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: const InputDecoration(labelText: 'パスワード'),
                     obscureText: true,
                     onChanged: (String value) {
-                      setState(() {
-                        password = value;
-                      });
+                      context.read(passwordProvider).state = value;
                     },
                   ),
                   Container(
@@ -94,9 +126,8 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         } catch (e) {
                           //エラー処理
-                          setState(() {
-                            infoText = "登録に失敗しました：${e.toString()}";
-                          });
+                          context.read(infoTextProvider).state =
+                              "登録に失敗しました：${e.toString()}";
                         }
                       },
                     ),
@@ -119,9 +150,8 @@ class _LoginPageState extends State<LoginPage> {
                               }),
                             );
                           } catch (e) {
-                            setState(() {
-                              infoText = "ログインに失敗しました: ${e.toString()}";
-                            });
+                            context.read(infoTextProvider).state =
+                                "ログインに失敗しました: ${e.toString()}";
                           }
                         },
                       )),
