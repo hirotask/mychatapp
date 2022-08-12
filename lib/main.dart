@@ -261,6 +261,7 @@ class AddPostPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, ScopedReader watch) {
     final User user = watch(userProvider).state!;
+    final messageText = watch(messageTextProvider).state;
 
     return Scaffold(
       appBar: AppBar(
@@ -293,7 +294,7 @@ class AddPostPage extends ConsumerWidget {
                             .collection("posts")
                             .doc()
                             .set({
-                          "text": context.read(messageTextProvider).state,
+                          "text": messageText,
                           "email": email,
                           "date": date
                         });
