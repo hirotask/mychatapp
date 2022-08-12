@@ -248,7 +248,7 @@ class ChatPage extends ConsumerWidget {
           // 投稿画面に遷移
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) {
-              return AddPostPage(user);
+              return AddPostPage();
             }),
           );
         },
@@ -257,20 +257,11 @@ class ChatPage extends ConsumerWidget {
   }
 }
 
-class AddPostPage extends StatefulWidget {
-  const AddPostPage(this.user);
-
-  final User user;
-
+class AddPostPage extends ConsumerWidget {
   @override
-  _AddPostPageState createState() => _AddPostPageState();
-}
+  Widget build(BuildContext context, ScopedReader watch) {
+    final User user = watch(userProvider).state!;
 
-class _AddPostPageState extends State<AddPostPage> {
-  String messageText = "";
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('チャット投稿'),
@@ -286,9 +277,7 @@ class _AddPostPageState extends State<AddPostPage> {
                   keyboardType: TextInputType.multiline,
                   maxLines: 3,
                   onChanged: (String value) {
-                    setState(() {
-                      messageText = value;
-                    });
+                    context.read(messageTextProvider).state = value;
                   },
                 ),
                 const SizedBox(height: 8),
@@ -298,13 +287,13 @@ class _AddPostPageState extends State<AddPostPage> {
                       child: Text("投稿"),
                       onPressed: () async {
                         final date = DateTime.now().toIso8601String();
-                        final email = widget.user.email;
+                        final email = user.email;
 
                         await FirebaseFirestore.instance
                             .collection("posts")
                             .doc()
                             .set({
-                          "text": messageText,
+                          "text": context.read(messageTextProvider).state,
                           "email": email,
                           "date": date
                         });
