@@ -117,11 +117,13 @@ class LoginPage extends ConsumerWidget {
                           final result =
                               await auth.createUserWithEmailAndPassword(
                                   email: email, password: password);
+                          //ユーザー情報を更新
+                          context.read(userProvider).state = result.user!;
 
                           //登録完了時の処理
                           await Navigator.of(context).pushReplacement(
                             MaterialPageRoute(builder: (context) {
-                              return ChatPage(result.user!);
+                              return ChatPage();
                             }),
                           );
                         } catch (e) {
@@ -144,9 +146,12 @@ class LoginPage extends ConsumerWidget {
                                 await auth.signInWithEmailAndPassword(
                                     email: email, password: password);
 
+                            //ユーザー情報を更新
+                            context.read(userProvider).state = result.user!;
+
                             await Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (context) {
-                                return ChatPage(result.user!);
+                                return ChatPage();
                               }),
                             );
                           } catch (e) {
@@ -161,13 +166,12 @@ class LoginPage extends ConsumerWidget {
   }
 }
 
-class ChatPage extends StatelessWidget {
-  ChatPage(this.user);
-
-  final User user;
-
+class ChatPage extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, ScopedReader watch) {
+    final User user = watch(userProvider).state!;
+    final AsyncValue<QuerySnapshot> asyncPostQuery = watch(postsQueryProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('チャット'),
@@ -195,43 +199,43 @@ class ChatPage extends StatelessWidget {
             child: Text("ログイン情報: ${user.email}"),
           ),
           Expanded(
-            // FutureBuilder
-            // 非同期処理の結果を元にWidgetを作れる
-            child: StreamBuilder<QuerySnapshot>(
-              // 投稿メッセージ一覧を取得（非同期処理）
-              // 投稿日時でソート
-
-              stream: FirebaseFirestore.instance
-                  .collection("posts")
-                  .orderBy("date")
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  final List<DocumentSnapshot> documents = snapshot.data!.docs;
-                  // 取得した投稿メッセージ一覧を元にリスト表示
-                  return ListView(
-                    children: documents.map((document) {
-                      return Card(
-                        child: ListTile(
-                          title: Text(document["text"]),
-                          subtitle: Text(document["email"]),
-                          trailing: document["email"] == user.email
-                              ? IconButton(
-                                  onPressed: () async {
-                                    await FirebaseFirestore.instance
-                                        .collection("posts")
-                                        .doc(document.id)
-                                        .delete();
-                                  },
-                                  icon: Icon(Icons.delete))
-                              : null,
-                        ),
-                      );
-                    }).toList(),
-                  );
-                }
+            // StreamProviderから受け取った値は .when() で状態に応じて出し分けできる
+            child: asyncPostQuery.when(
+              // 値が取得できたとき
+              data: (QuerySnapshot query) {
+                return ListView(
+                  children: query.docs.map((document) {
+                    return Card(
+                      child: ListTile(
+                        title: Text(document['text']),
+                        subtitle: Text(document['email']),
+                        trailing: document['email'] == user.email
+                            ? IconButton(
+                                icon: Icon(Icons.delete),
+                                onPressed: () async {
+                                  // 投稿メッセージのドキュメントを削除
+                                  await FirebaseFirestore.instance
+                                      .collection('posts')
+                                      .doc(document.id)
+                                      .delete();
+                                },
+                              )
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              // 値が読込中のとき
+              loading: () {
                 return const Center(
-                  child: Text("読込中..."),
+                  child: Text('読込中...'),
+                );
+              },
+              // 値の取得に失敗したとき
+              error: (e, stackTrace) {
+                return Center(
+                  child: Text(e.toString()),
                 );
               },
             ),
